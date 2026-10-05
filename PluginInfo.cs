@@ -29,7 +29,7 @@ namespace Ratalyth
 public const string GUID = "org.ratalyth.gorillatag.ratalythmenu";
         public const string Name = "Ratalyth Menu";
         public const string Description = "Community powered mod menu for Gorilla Tag.";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         /// <summary>
         /// Stamped by the build through AssemblyMetadata, read reflectively so building the menu no

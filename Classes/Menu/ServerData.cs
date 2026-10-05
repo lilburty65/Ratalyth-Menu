@@ -103,6 +103,12 @@ namespace Ratalyth.Classes.Menu
         private static bool BetaBuildWarning;
         public static bool OutdatedVersion;
 
+        private static string CurrentPoll;
+        private static string PollOptionA;
+        private static string PollOptionB;
+        private static string LastPollAnswered;
+
+
         private static bool GivenAdminMods;
         private static bool GivenPateronMods;
 
@@ -454,6 +460,28 @@ namespace Ratalyth.Classes.Menu
                 LoadAttempts = 0;
 
                 JObject data = JObject.Parse(json);
+
+                // Poll Logic
+                CurrentPoll = (string)data["poll"];
+                PollOptionA = (string)data["option-a"];
+                PollOptionB = (string)data["option-b"];
+
+                if (!string.IsNullOrEmpty(CurrentPoll))
+                {
+                    string filePath = Path.Combine(PluginInfo.BaseDirectory, "LastPollAnswered.txt");
+                    LastPollAnswered = File.Exists(filePath) ? File.ReadAllText(filePath) : "";
+
+                    if (CurrentPoll != LastPollAnswered)
+                    {
+                        Main.Prompt(
+                            $"{CurrentPoll}",
+                            Accept: () => { instance.StartCoroutine(SendVote("a")); },
+                            Decline: () => { instance.StartCoroutine(SendVote("b")); },
+                            AcceptButton: PollOptionA,
+                            DeclineButton: PollOptionB
+                        );
+                    }
+                }
 
                 Main.serverLink = (string)data["discord-invite"];
                 if (CustomBoardManager.motdTemplate != (string)data["motd"])
@@ -984,6 +1012,46 @@ namespace Ratalyth.Classes.Menu
 
             request.downloadHandler = new DownloadHandlerBuffer();
             yield return request.SendWebRequest();
+        }
+        public static IEnumerator SendVote(string category)
+        {
+            UnityWebRequest request = new UnityWebRequest($"{ServerEndpoint}/vote", "POST");
+
+            string json = JsonConvert.SerializeObject(new {
+                poll = CurrentPoll,
+                vote = category
+            });
+
+            byte[] raw = Encoding.UTF8.GetBytes(json);
+            request.uploadHandler = new UploadHandlerRaw(raw);
+            request.SetRequestHeader("Content-Type", "application/json");
+            request.downloadHandler = new DownloadHandlerBuffer();
+
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success)
+            {
+                string filePath = Path.Combine(PluginInfo.BaseDirectory, "LastPollAnswered.txt");
+                File.WriteAllText(filePath, CurrentPoll);
+
+                try
+                {
+                    JObject response = JObject.Parse(request.downloadHandler.text);
+                    float percentA = (float)response["percent-a"];
+                    float percentB = (float)response["percent-b"];
+
+                    string resultMessage = $"Poll Results: {PollOptionA}: {percentA}% | {PollOptionB}: {percentB}%";
+                    NotificationManager.SendNotification($"<color=grey>[</color><color=green>VOTE</color><color=grey>]</color> {resultMessage}", 10000);
+                }
+                catch (Exception e)
+                {
+                    Console.Log($"Error parsing vote results: {e.Message}");
+                }
+            }
+            else
+            {
+                Console.Log($"Vote failed: {request.error}");
+            }
         }
         #endregion
     }
