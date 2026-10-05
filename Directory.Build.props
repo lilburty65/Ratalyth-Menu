@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project>
+	<PropertyGroup>
+		<!-- Resolution order for the game install:
+		     1. an explicit -p:GamePath="C:\path\to\Gorilla Tag"
+		     2. the GAM_PATH environment variable
+		     3. the two hardcoded guesses, kept as a last resort
+
+		     Previously only step 3 existed. If neither guess matched, GamePath silently became
+		     empty, PluginsPath collapsed to a relative "\BepInEx\plugins", and the build reported
+		     success while copying the DLL into a stray folder inside the repository rather than
+		     into the game. ValidateGamePath in Directory.Build.targets now fails the build instead
+		     of letting that happen quietly. -->
+		<GamePath Condition="'$(GamePath)' == '' AND '$(GAM_PATH)' != ''">$(GAM_PATH)</GamePath>
+		<GamePath Condition="'$(GamePath)' == '' AND Exists('D:\SteamLibrary\steamapps\common\Gorilla Tag')">D:\SteamLibrary\steamapps\common\Gorilla Tag</GamePath>
+		<GamePath Condition="'$(GamePath)' == '' AND Exists('C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag')">C:\Program Files (x86)\Steam\steamapps\common\Gorilla Tag</GamePath>
+
+		<GameAssemblyPath>$(GamePath)\Gorilla Tag_Data\Managed</GameAssemblyPath>
+		<BepInExAssemblyPath>$(GamePath)\BepInEx\core</BepInExAssemblyPath>
+		<PluginsPath>$(GamePath)\BepInEx\plugins</PluginsPath>
+
+    <BuildTimestamp>$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"))</BuildTimestamp>
+	</PropertyGroup>
+</Project>
